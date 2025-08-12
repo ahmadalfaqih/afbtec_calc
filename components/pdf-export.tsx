@@ -1,0 +1,234 @@
+"use client"
+
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { useState } from "react"
+
+type Grade = "P" | "M" | "D" | ""
+
+interface PDFExportProps {
+  year1Grades: Grade[]
+  year2Grades: Grade[]
+  sharedGrades: Grade[]
+  finalGrade: number
+  year1Average: number
+  year2Average: number
+  sharedAverage: number
+}
+
+const gradeValues = {
+  P: 60,
+  M: 80,
+  D: 100,
+}
+
+export function PDFExport({
+  year1Grades,
+  year2Grades,
+  sharedGrades,
+  finalGrade,
+  year1Average,
+  year2Average,
+  sharedAverage,
+}: PDFExportProps) {
+  const [studentName, setStudentName] = useState("")
+  const [studentId, setStudentId] = useState("")
+  const [isExporting, setIsExporting] = useState(false)
+
+  const getFinalGradeStatus = (grade: number) => {
+    if (grade >= 85) return { text: "ممتاز جداً", textEn: "Excellent" }
+    if (grade >= 75) return { text: "ممتاز", textEn: "Very Good" }
+    if (grade >= 65) return { text: "جيد جداً", textEn: "Good" }
+    if (grade >= 60) return { text: "جيد", textEn: "Pass" }
+    return { text: "يحتاج تحسين", textEn: "Needs Improvement" }
+  }
+
+  const exportToPDF = async () => {
+    if (!studentName.trim()) {
+      alert("يرجى إدخال اسم الطالب")
+      return
+    }
+
+    setIsExporting(true)
+
+    try {
+      const jsPDF = (await import("jspdf")).default
+
+      const doc = new jsPDF()
+
+      doc.setFont("helvetica")
+
+      doc.setFontSize(20)
+      doc.setTextColor(59, 130, 246) 
+      doc.text("BTEC IT Grade Report", 105, 20, { align: "center" })
+
+      doc.setFontSize(16)
+      doc.setTextColor(99, 102, 241) 
+      doc.text("تقرير درجات BTEC IT", 105, 30, { align: "center" })
+
+      doc.setFontSize(12)
+      doc.setTextColor(0, 0, 0)
+      doc.text(`Student Name: ${studentName}`, 20, 50)
+      if (studentId) {
+        doc.text(`Student ID: ${studentId}`, 20, 60)
+      }
+      doc.text(`Date: ${new Date().toLocaleDateString()}`, 20, studentId ? 70 : 60)
+
+      let yPos = studentId ? 90 : 80
+
+      doc.setFontSize(14)
+      doc.setTextColor(75, 85, 99)
+      doc.text("Grade System:", 20, yPos)
+      yPos += 10
+
+      doc.setFontSize(10)
+      doc.text("P = Pass (60%)", 30, yPos)
+      doc.text("M = Merit (80%)", 80, yPos)
+      doc.text("D = Distinction (100%)", 130, yPos)
+      yPos += 20
+
+      doc.setFontSize(12)
+      doc.setTextColor(59, 130, 246)
+      doc.text("Year 1 Results (35% weight):", 20, yPos)
+      yPos += 10
+
+      doc.setFontSize(10)
+      doc.setTextColor(0, 0, 0)
+      year1Grades.forEach((grade, index) => {
+        if (grade) {
+          doc.text(`Subject ${index + 1}: ${grade} (${gradeValues[grade]}%)`, 30, yPos)
+          yPos += 8
+        }
+      })
+      doc.text(`Year 1 Average: ${year1Average.toFixed(1)}%`, 30, yPos)
+      doc.text(`Contribution: ${(year1Average * 0.35).toFixed(1)} points`, 30, yPos + 8)
+      yPos += 25
+
+      doc.setFontSize(12)
+      doc.setTextColor(99, 102, 241)
+      doc.text("Year 2 Results (35% weight):", 20, yPos)
+      yPos += 10
+
+      doc.setFontSize(10)
+      doc.setTextColor(0, 0, 0)
+      year2Grades.forEach((grade, index) => {
+        if (grade) {
+          doc.text(`Subject ${index + 1}: ${grade} (${gradeValues[grade]}%)`, 30, yPos)
+          yPos += 8
+        }
+      })
+      doc.text(`Year 2 Average: ${year2Average.toFixed(1)}%`, 30, yPos)
+      doc.text(`Contribution: ${(year2Average * 0.35).toFixed(1)} points`, 30, yPos + 8)
+      yPos += 25
+
+      doc.setFontSize(12)
+      doc.setTextColor(147, 51, 234)
+      doc.text("Shared Exam Results (30% weight):", 20, yPos)
+      yPos += 10
+
+      doc.setFontSize(10)
+      doc.setTextColor(0, 0, 0)
+      sharedGrades.forEach((grade, index) => {
+        if (grade) {
+          doc.text(`Shared Subject ${index + 1}: ${grade} (${gradeValues[grade]}%)`, 30, yPos)
+          yPos += 8
+        }
+      })
+      doc.text(`Shared Exam Average: ${sharedAverage.toFixed(1)}%`, 30, yPos)
+      doc.text(`Contribution: ${(sharedAverage * 0.3).toFixed(1)} points`, 30, yPos + 8)
+      yPos += 25
+
+      doc.setFontSize(16)
+      doc.setTextColor(220, 38, 127)
+      doc.text("Final Result:", 20, yPos)
+      yPos += 15
+
+      doc.setFontSize(24)
+      doc.setTextColor(59, 130, 246)
+      doc.text(`${finalGrade.toFixed(1)}%`, 20, yPos)
+
+      doc.setFontSize(14)
+      doc.setTextColor(0, 0, 0)
+      doc.text(`Grade: ${getFinalGradeStatus(finalGrade).textEn}`, 80, yPos)
+      yPos += 20
+
+      doc.setFontSize(10)
+      doc.setTextColor(107, 114, 128)
+      doc.text("Calculation Formula:", 20, yPos)
+      yPos += 8
+      doc.text(`Final Grade = (Year 1 × 0.35) + (Year 2 × 0.35) + (Shared Exam × 0.30)`, 20, yPos)
+      yPos += 8
+      doc.text(
+        `Final Grade = (${year1Average.toFixed(1)} × 0.35) + (${year2Average.toFixed(1)} × 0.35) + (${sharedAverage.toFixed(1)} × 0.30) = ${finalGrade.toFixed(1)}%`,
+        20,
+        yPos,
+      )
+
+      doc.setFontSize(8)
+      doc.setTextColor(156, 163, 175)
+      doc.text("Generated by BTEC Calculator - btec-calculator.com", 105, 280, { align: "center" })
+
+      doc.save(`BTEC_Grade_Report_${studentName.replace(/\s+/g, "_")}_${new Date().toISOString().split("T")[0]}.pdf`)
+    } catch (error) {
+      console.error("Error generating PDF:", error)
+      alert("حدث خطأ أثناء إنشاء ملف PDF")
+    } finally {
+      setIsExporting(false)
+    }
+  }
+
+  return (
+    <div className="space-y-4 p-6 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl border border-blue-200 dark:border-blue-700">
+      <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200 text-center">تصدير النتائج كـ PDF</h3>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-gray-700 dark:text-gray-300">اسم الطالب *</label>
+          <Input
+            type="text"
+            placeholder="أدخل اسم الطالب"
+            value={studentName}
+            onChange={(e) => setStudentName(e.target.value)}
+            className="bg-white dark:bg-gray-700"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-gray-700 dark:text-gray-300">رقم الطالب (اختياري)</label>
+          <Input
+            type="text"
+            placeholder="أدخل رقم الطالب"
+            value={studentId}
+            onChange={(e) => setStudentId(e.target.value)}
+            className="bg-white dark:bg-gray-700"
+          />
+        </div>
+      </div>
+
+      <Button
+        onClick={exportToPDF}
+        disabled={isExporting || !studentName.trim()}
+        className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold py-3 px-6 rounded-lg shadow-lg hover:shadow-xl transition-all duration-300"
+      >
+        {isExporting ? (
+          <div className="flex items-center justify-center space-x-2 rtl:space-x-reverse">
+            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+            <span>جاري إنشاء PDF...</span>
+          </div>
+        ) : (
+          <div className="flex items-center justify-center space-x-2 rtl:space-x-reverse">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+              />
+            </svg>
+            <span>تحميل تقرير PDF</span>
+          </div>
+        )}
+      </Button>
+    </div>
+  )
+}
